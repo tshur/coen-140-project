@@ -10,7 +10,7 @@ from scipy import ndimage
 
 tf.logging.set_verbosity(tf.logging.INFO)
 
-CIFAR_DATA_FOLDER = '~/.kaggle/competitions/cifar-10'
+CIFAR_DATA_FOLDER = 'data/'
 """
 Directory includes:
     - sampleSubmission.csv
@@ -28,7 +28,7 @@ def cnn_model_fn(features, labels, mode):
     1, i.e., the number of color channels (in this case, img is monochrome)"""
     input_layer = tf.reshape(
         features["x"],  # data to reshape; our image features
-        [-1, 28, 28, 1] # desired shape: [batch_size, width, height, channels]
+        [-1, 32, 32, 3] # desired shape: [batch_size, width, height, channels]
     )
 
     # First Convolutional Layer; output shape = [batch_size, 28, 28, 32]
@@ -72,14 +72,14 @@ def cnn_model_fn(features, labels, mode):
     )
 
     # Flatten pool2 for input to dense layer; out_shape=[batch_size, 3136]
-    pool2_flat = tf.reshape(pool2, [-1, 7 * 7 * 64])  # reshape to be flat (2D)
+    pool2_flat = tf.reshape(pool2, [-1, 8 * 8 * 64])  # reshape to be flat (2D)
 
     # Performs the actual classification of the abstracted features from conv1/2
     # 512 nodes for this dense layer; ReLU activation
     ############################## YOUR CODE ##############################
     dense = tf.layers.dense(
         inputs = pool2_flat,
-        units = 512,
+        units = 1024,
         activation = tf.nn.relu
     )
 
@@ -87,7 +87,7 @@ def cnn_model_fn(features, labels, mode):
     # decrease the chances of over-fitting the training data
     dropout = tf.layers.dropout(
         inputs=dense,          # inputs from the dense layer
-        rate=0.2,              # randomly drop-out 40% of samples; keep 60%
+        rate=0.5,              # randomly drop-out 40% of samples; keep 60%
         training=(mode == tf.estimator.ModeKeys.TRAIN)  # is training mode? T/F
     )
     # Output of dense layer, shape = [batch_size, 1024]
@@ -141,7 +141,7 @@ def cnn_model_fn(features, labels, mode):
         # the optimum. Higher rates may learn faster but may overshoot the opt
         # Let's use a Gradient Descent Optimizer -- learning_rate of 0.06
         ############################## YOUR CODE ##############################
-        optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.06)
+        optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.001)
 
         # Use our Grad Descent optimizer to minimize the loss we calculated!
         train_op = optimizer.minimize(
@@ -173,25 +173,25 @@ def cnn_model_fn(features, labels, mode):
 
 def main(unused_argv):
     # Load training and eval data from MNIST set of handdrawn images
-    mnist = tf.contrib.learn.datasets.load_dataset("mnist")
-    train_data = mnist.train.images  # 55,000 images in this set!
-    print(train_data.shape)
-    train_labels = np.asarray(mnist.train.labels, dtype=np.int32)
-    eval_data = mnist.test.images  # 10,000 images here!
-    eval_labels = np.asarray(mnist.test.labels, dtype=np.int32)
+    # mnist = tf.contrib.learn.datasets.load_dataset("mnist")
+    # train_data = mnist.train.images  # 55,000 images in this set!
+
+    # train_labels = np.asarray(mnist.train.labels, dtype=np.int32)
+    # eval_data = mnist.test.images  # 10,000 images here!
+    # eval_labels = np.asarray(mnist.test.labels, dtype=np.int32)
 
     # Create the actual Estimator to run our model
     ############################## YOUR CODE ##############################
-    mnist_classifier = tf.estimator.Estimator(
+    cnn_classifier = tf.estimator.Estimator(
         model_fn = cnn_model_fn,
-        model_dir='./mnist_my_model'
+        model_dir='./cifar_cnn_model'
     )
 
     # Setup logging here
     tensors_to_log = {"probabilities": "softmax_tensor"} # prob from earlier
     logging_hook = tf.train.LoggingTensorHook(
         tensors=tensors_to_log,  # format {name-for-log: tensor-to-log}
-        every_n_iter=50  # log every 50 steps of training
+        every_n_iter=100  # log every 50 steps of training
     )
 
     # Training the model
@@ -202,35 +202,23 @@ def main(unused_argv):
         num_epochs=None,
         shuffle=True)         # randomize
     
-    # # Add the code to train the mnist_classifier over 500 steps!
-    # ############################## YOUR CODE ##############################
-    # train_input_fn = tf.estimator.inputs.numpy_input_fn(
-    #     x={"x": train_data},
-    #     y=train_labels,
-    #     batch_size=100,
-    #     num_epochs=None,
-    #     shuffle=True
-    # )
-    # mnist_classifier.train(
-    #     input_fn = train_input_fn,
-    #     steps = 500,
-    #     hooks=[logging_hook]
-    # )
+    cnn_classifier.train(
+        input_fn = train_input_fn,
+        steps = 500,
+        hooks=[logging_hook]
+    )
 
-    # # Evaluate the model and print results!
-    # # Build the evaluate_input_function for giving the classifier our data
-    # eval_input_fn = tf.estimator.inputs.numpy_input_fn(
-    #     x={"x": eval_data},
-    #     y=eval_labels,
-    #     num_epochs=1,
-    #     shuffle=False)
-    # eval_results = mnist_classifier.evaluate(
-    #     input_fn=eval_input_fn)  # evaluate based on the data!
+    # Evaluate the model and print results!
+    # Build the evaluate_input_function for giving the classifier our data
+    eval_input_fn = tf.estimator.inputs.numpy_input_fn(
+        x={"x": eval_data},
+        y=eval_labels,
+        num_epochs=1,
+        shuffle=False)
+    eval_results = cnn_classifier.evaluate(
+        input_fn=eval_input_fn)  # evaluate based on the data!
 
-    # print(eval_results)
-
-    # Evaluate on our own handwritten digits!? Uncomment below ~
-    evaluate_my_handwritten(mnist_classifier, logging_hook, MY_DATA_FOLDER)
+    print(eval_results)
 
 def evaluate_my_handwritten(mnist_classifier, logging_hook, data_folder):
     if not os.path.exists('new-data'):
@@ -247,7 +235,7 @@ def evaluate_my_handwritten(mnist_classifier, logging_hook, data_folder):
     )
 
     # evaluate based on the data!
-    eval_results = mnist_classifier.evaluate(
+    eval_results = cnn_classifier.evaluate(
         input_fn=eval_input_fn,
         hooks=[logging_hook]
     )
@@ -255,7 +243,6 @@ def evaluate_my_handwritten(mnist_classifier, logging_hook, data_folder):
     print(eval_results)  # Print our results and accuracy!
 
 def preprocess_my_handwritten(data_folder):
-    # based on https://medium.com/@o.kroeger/tensorflow-mnist-and-your-own-handwritten-digits-4d1cd32bbab4
 
     # the folders to contain our data
     raw_filepath = os.path.join(data_folder, 'raw')

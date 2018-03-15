@@ -1,5 +1,6 @@
 # Custom ignores
 .DS_Store
+cifar-10/cifar_cnn_model
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
