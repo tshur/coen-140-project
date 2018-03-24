@@ -88,11 +88,27 @@ def convert_to_tfrecord(input_files, output_file):
         proc = np.array(proc)
 
         image = np.reshape(proc, (32, 32, 3))
-        cv2.imwrite('eval_image.png', image)
+        cv2.imwrite(os.path.join('censor_data', 'img.png'), image)
 
-        images = []
-        # manipulate image in many ways and append to images!
-        images.append(image)
+        images = [image]  # start with original image
+
+        # black out rectangles of the image to make sub imgs
+        parts = [4, 4]  # [x, y] number of divisions
+        part_size = [32 // parts[0], 32 // parts[1]]
+        for i in xrange(parts[0]):
+          for j in xrange(parts[1]):
+            x = i * part_size[0]
+            y = j * part_size[1]
+            # (x, y) is the top left corner of the rectangle
+
+            img = image.copy()
+
+            for x_offset in xrange(part_size[0]):
+              for y_offset in xrange(part_size[1]):
+                img[x + x_offset][y + y_offset] = [0, 0, 0]
+
+            cv2.imwrite(os.path.join('censor_data', 'img_{}_{}.png'.format(i,j)), img)
+            images.append(img)
 
         for image in images:
           example = tf.train.Example(features=tf.train.Features(

@@ -188,7 +188,7 @@ def get_model_fn(num_gpus, variable_strategy, num_workers):
               tf.metrics.accuracy(stacked_labels, predictions['classes'])
       }
 
-      logging_hook = tf.train.LoggingTensorHook(
+      eval_hook = tf.train.LoggingTensorHook(
           tensors={'loss': loss}, every_n_iter=1)
       eval_hooks = [eval_hook]
 
