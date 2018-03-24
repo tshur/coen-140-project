@@ -109,6 +109,6 @@ class Cifar10DataSet(object):
     elif subset == 'validation':
       return 5000
     elif subset == 'eval':
-      return 10000
+      return 17 # 10000
     else:
       raise ValueError('Invalid data subset "%s"' % subset)

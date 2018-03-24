@@ -93,59 +93,57 @@ def convert_to_tfrecord(input_files, output_file):
   with tf.python_io.TFRecordWriter(output_file) as record_writer:
     for input_file in input_files:
       data_dict = read_pickle_from_file(input_file)
-      data = [data_dict['data'][0]]
-      labels = [data_dict['labels'][0]]
+      data = data_dict['data'][:1]
+      labels = data_dict['labels'][:1]
 
       if 'test_batch' in input_file:
-        image = np.array(data[0])
-        print(labels[0])
+        print(labels)
 
-        image = to_image(image)  # shape (32*32*3) to shape (32, 32, 3)
+        ctr = 0
+        for image in data:
+          images = []
 
-        cv2.imwrite(os.path.join('censor_data', 'img.png'), image)
+          image = to_image(np.array(image))
 
-        images = [image]  # start with original image
+          cv2.imwrite(os.path.join('censor_data', 'img_{}.png'.format(ctr)), image)
+          images.append(to_array(image))  # start with original image
 
-        # black out rectangles of the image to make sub imgs
-        delta = [2, 2]  # [x, y] delta
-        part_size = [32 // 4, 32 // 4]
-        divisions = [(32 - part_size[0]) // delta[0], (32 - part_size[1]) // delta[1]]
-        for i in xrange(divisions[0] + 1):
-          for j in xrange(divisions[1] + 1):
-            x = i * delta[0]
-            y = j * delta[1]
-            # (x, y) is the top left corner of the rectangle
+          # black out rectangles of the image to make sub imgs
+          parts = [4, 4]  # [x, y] number of divisions
+          part_size = [32 // parts[0], 32 // parts[1]]
+          for i in xrange(parts[0]):
+            for j in xrange(parts[1]):
+              x = i * part_size[0]
+              y = j * part_size[1]
+              # (x, y) is the top left corner of the rectangle
 
-            img = image.copy()
+              img = image.copy()
 
-            for x_offset in xrange(part_size[0]):
-              for y_offset in xrange(part_size[1]):
-                img[x + x_offset][y + y_offset] = [0, 0, 0]
+              for x_offset in xrange(part_size[0]):
+                for y_offset in xrange(part_size[1]):
+                  img[x + x_offset][y + y_offset] = [0, 0, 0]
 
-            img = to_image(to_array(img))
+              cv2.imwrite(os.path.join('censor_data', 'img_{}_{}_{}.png'.format(ctr,i,j)), img)
+              images.append(to_array(img))
 
-            cv2.imwrite(os.path.join('censor_data', 'img_{}_{}.png'.format(i,j)), img)
+          for im in images:
+            example = tf.train.Example(features=tf.train.Features(
+                feature={
+                    'image': _bytes_feature(im.tobytes()),
+                    'label': _int64_feature(labels[ctr])
+                }))
+            record_writer.write(example.SerializeToString())
 
-            images.append(to_array(img))
+          ctr += 1
 
-        for im in images:
-          example = tf.train.Example(features=tf.train.Features(
-              feature={
-                  'image': _bytes_feature(im.tobytes()),
-                  'label': _int64_feature(labels[0])
-              }))
-          record_writer.write(example.SerializeToString())
-
-      else:
-        num_entries_in_batch = len(labels)
-        for i in range(num_entries_in_batch):
-          example = tf.train.Example(features=tf.train.Features(
-              feature={
-                  'image': _bytes_feature(data[i].tobytes()),
-                  'label': _int64_feature(labels[i])
-              }))
-          record_writer.write(example.SerializeToString())
-
+      # num_entries_in_batch = len(labels)
+      # for i in range(num_entries_in_batch):
+      #   example = tf.train.Example(features=tf.train.Features(
+      #       feature={
+      #           'image': _bytes_feature(data[i].tobytes()),
+      #           'label': _int64_feature(labels[i])
+      #       }))
+      #   record_writer.write(example.SerializeToString())
 
 def main(data_dir):
   print('Download from {} and extract.'.format(CIFAR_DOWNLOAD_URL))
