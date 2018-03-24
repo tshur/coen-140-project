@@ -70,6 +70,25 @@ def read_pickle_from_file(filename):
 
 def convert_to_tfrecord(input_files, output_file):
   """Converts a file to TFRecords."""
+  def to_image(array):
+    channels = np.split(array, 3)
+    proc = []
+    for i in xrange(len(channels[0])):
+      for j in [0,1,2]:
+        proc.append(channels[j][i])
+    proc = np.array(proc)
+    image = np.reshape(proc, (32, 32, 3))
+    return image
+
+  def to_array(image):
+    proc = []
+    for c in [0,1,2]:
+      for x in xrange(len(image[0])):
+        for y in xrange(len(image[0])):
+          proc.append(image[x][y][c])
+    array = np.array(proc)
+    return array
+
   print('Generating %s' % output_file)
   with tf.python_io.TFRecordWriter(output_file) as record_writer:
     for input_file in input_files:
@@ -79,15 +98,10 @@ def convert_to_tfrecord(input_files, output_file):
 
       if 'test_batch' in input_file:
         image = np.array(data[0])
+        print(labels[0])
 
-        channels = np.split(image, 3)
-        proc = []
-        for i in xrange(len(channels[0])):
-          for j in [0,1,2]:
-            proc.append(channels[j][i])
-        proc = np.array(proc)
+        image = to_image(image)  # shape (32*32*3) to shape (32, 32, 3)
 
-        image = np.reshape(proc, (32, 32, 3))
         cv2.imwrite(os.path.join('censor_data', 'img.png'), image)
 
         images = [image]  # start with original image
@@ -107,25 +121,29 @@ def convert_to_tfrecord(input_files, output_file):
               for y_offset in xrange(part_size[1]):
                 img[x + x_offset][y + y_offset] = [0, 0, 0]
 
-            cv2.imwrite(os.path.join('censor_data', 'img_{}_{}.png'.format(i,j)), img)
-            images.append(img)
+            img = to_image(to_array(img))
 
-        for image in images:
+            cv2.imwrite(os.path.join('censor_data', 'img_{}_{}.png'.format(i,j)), img)
+
+            images.append(to_array(img))
+
+        for im in images:
           example = tf.train.Example(features=tf.train.Features(
               feature={
-                  'image': _bytes_feature(image.tobytes()),
+                  'image': _bytes_feature(im.tobytes()),
                   'label': _int64_feature(labels[0])
               }))
           record_writer.write(example.SerializeToString())
 
-      num_entries_in_batch = len(labels)
-      for i in range(num_entries_in_batch):
-        example = tf.train.Example(features=tf.train.Features(
-            feature={
-                'image': _bytes_feature(data[i].tobytes()),
-                'label': _int64_feature(labels[i])
-            }))
-        #record_writer.write(example.SerializeToString())
+      else:
+        num_entries_in_batch = len(labels)
+        for i in range(num_entries_in_batch):
+          example = tf.train.Example(features=tf.train.Features(
+              feature={
+                  'image': _bytes_feature(data[i].tobytes()),
+                  'label': _int64_feature(labels[i])
+              }))
+          record_writer.write(example.SerializeToString())
 
 
 def main(data_dir):
