@@ -189,7 +189,7 @@ def get_model_fn(num_gpus, variable_strategy, num_workers):
       }
 
       eval_hook = tf.train.LoggingTensorHook(
-          tensors={'loss': loss}, every_n_iter=1)
+          tensors={'classes': predictions['classes'], 'probability': predictions['probabilities']}, every_n_iter=1)
       eval_hooks = [eval_hook]
 
     return tf.estimator.EstimatorSpec(
@@ -404,10 +404,6 @@ def main(job_dir, data_dir, num_gpus, variable_strategy,
                               config.num_worker_replicas or 1),
         config=config,
         params=hparams)
-
-    # classifier.evaluate(
-    #   input_fn=eval_input_fn
-    # )
 
     num_eval_examples = cifar10.Cifar10DataSet.num_examples_per_epoch('eval')
     if num_eval_examples % hparams.eval_batch_size != 0:

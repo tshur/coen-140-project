@@ -107,12 +107,13 @@ def convert_to_tfrecord(input_files, output_file):
         images = [image]  # start with original image
 
         # black out rectangles of the image to make sub imgs
-        parts = [4, 4]  # [x, y] number of divisions
-        part_size = [32 // parts[0], 32 // parts[1]]
-        for i in xrange(parts[0]):
-          for j in xrange(parts[1]):
-            x = i * part_size[0]
-            y = j * part_size[1]
+        delta = [2, 2]  # [x, y] delta
+        part_size = [32 // 4, 32 // 4]
+        divisions = [(32 - part_size[0]) // delta[0], (32 - part_size[1]) // delta[1]]
+        for i in xrange(divisions[0] + 1):
+          for j in xrange(divisions[1] + 1):
+            x = i * delta[0]
+            y = j * delta[1]
             # (x, y) is the top left corner of the rectangle
 
             img = image.copy()
