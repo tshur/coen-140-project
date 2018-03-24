@@ -22,8 +22,10 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import numpy as np
 import argparse
 import os
+import cv2
 
 import tarfile
 from six.moves import cPickle as pickle
@@ -74,6 +76,22 @@ def convert_to_tfrecord(input_files, output_file):
       data_dict = read_pickle_from_file(input_file)
       data = [data_dict['data'][0]]
       labels = [data_dict['labels'][0]]
+
+      if 'test_batch' in input_file:
+        image = np.array(data[0])
+
+        channels = np.split(image, 3)
+        proc = []
+        for i in xrange(len(channels[0])):
+          for j in [0,1,2]:
+            proc.append(channels[j][i])
+        proc = np.array(proc)
+
+        image = np.reshape(proc, (32, 32, 3))
+        cv2.imwrite('eval_image.png', image)
+
+        
+
       num_entries_in_batch = len(labels)
       for i in range(num_entries_in_batch):
         example = tf.train.Example(features=tf.train.Features(
