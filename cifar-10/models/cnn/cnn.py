@@ -201,7 +201,7 @@ def main(unused_argv):
         batch_size=100,       # num samples to give at a time - orig: 100
         num_epochs=None,
         shuffle=True)         # randomize
-    
+    input_fn
     cnn_classifier.train(
         input_fn = train_input_fn,
         steps = 500,

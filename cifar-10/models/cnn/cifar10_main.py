@@ -369,14 +369,42 @@ def main(job_dir, data_dir, num_gpus, variable_strategy,
               is_chief=config.is_chief,
               **hparams)
 
-  # Edit this for steps you want to log
-  for i in range(41, 51):
-    hparams.train_steps = i * 2000
-    tf.contrib.learn.learn_runner.run(
-        get_experiment_fn(data_dir, num_gpus, variable_strategy,
-                          use_distortion_for_training),
-        run_config=config,
-        hparams=hparams)
+  # # Edit this for steps you want to log
+  # for i in range(41, 51):
+  #   hparams.train_steps = i * 2000
+  #   tf.contrib.learn.learn_runner.run(
+  #       get_experiment_fn(data_dir, num_gpus, variable_strategy,
+  #                         use_distortion_for_training),
+  #       run_config=config,
+  #       hparams=hparams)
+
+  evaluate_with_censor()
+
+  def evaluate_with_censor():
+    """Evaluate model with censored image
+
+    Goal: Examine one image only and evaluate it with different
+    sections censored (i.e., blacked out). Create a heat-map of
+    most important/distinguishing pixels for analysis.
+    """
+
+    # Create estimator.
+    eval_input_fn = functools.partial(
+        input_fn,
+        data_dir,
+        subset='eval',
+        batch_size=hparams.eval_batch_size,
+        num_shards=num_gpus)
+
+    classifier = tf.estimator.Estimator(
+        model_fn=get_model_fn(num_gpus, variable_strategy,
+                              run_config.num_worker_replicas or 1),
+        config=run_config,
+        params=hparams)
+
+    classifier.evaluate(
+      input_fn=eval_input_fn
+    )
 
 
 if __name__ == '__main__':
