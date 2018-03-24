@@ -66,8 +66,12 @@ class Cifar10DataSet(object):
     return image, label
 
   def make_batch(self, batch_size):
+    # batch_size = 1
+
     """Read the images and labels from 'filenames'."""
     filenames = self.get_filenames()
+    # filenames = tf.Print(filenames, [filenames], message="############################: ")
+
     # Repeat infinitely.
     dataset = tf.contrib.data.TFRecordDataset(filenames).repeat()
 

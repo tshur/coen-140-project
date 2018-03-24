@@ -378,8 +378,6 @@ def main(job_dir, data_dir, num_gpus, variable_strategy,
   #       run_config=config,
   #       hparams=hparams)
 
-  evaluate_with_censor()
-
   def evaluate_with_censor():
     """Evaluate model with censored image
 
@@ -398,14 +396,34 @@ def main(job_dir, data_dir, num_gpus, variable_strategy,
 
     classifier = tf.estimator.Estimator(
         model_fn=get_model_fn(num_gpus, variable_strategy,
-                              run_config.num_worker_replicas or 1),
-        config=run_config,
+                              config.num_worker_replicas or 1),
+        config=config,
         params=hparams)
 
-    classifier.evaluate(
-      input_fn=eval_input_fn
-    )
+    # classifier.evaluate(
+    #   input_fn=eval_input_fn
+    # )
 
+    num_eval_examples = cifar10.Cifar10DataSet.num_examples_per_epoch('eval')
+    if num_eval_examples % hparams.eval_batch_size != 0:
+      raise ValueError(
+          'validation set size must be multiple of eval_batch_size')
+
+    eval_steps = num_eval_examples // hparams.eval_batch_size
+
+    experiment = tf.contrib.learn.Experiment(
+        classifier,
+        train_input_fn=None,
+        eval_input_fn=eval_input_fn,
+        train_steps=1,
+        eval_steps=eval_steps)
+
+    tf.contrib.learn.learn_runner.run(
+        lambda x, y: experiment,
+        run_config=config,
+        hparams=hparams)
+
+  evaluate_with_censor()
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser()

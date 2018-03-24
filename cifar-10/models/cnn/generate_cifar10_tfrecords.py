@@ -72,8 +72,8 @@ def convert_to_tfrecord(input_files, output_file):
   with tf.python_io.TFRecordWriter(output_file) as record_writer:
     for input_file in input_files:
       data_dict = read_pickle_from_file(input_file)
-      data = data_dict['data']
-      labels = data_dict['labels']
+      data = [data_dict['data'][0]]
+      labels = [data_dict['labels'][0]]
       num_entries_in_batch = len(labels)
       for i in range(num_entries_in_batch):
         example = tf.train.Example(features=tf.train.Features(
