@@ -90,7 +90,17 @@ def convert_to_tfrecord(input_files, output_file):
         image = np.reshape(proc, (32, 32, 3))
         cv2.imwrite('eval_image.png', image)
 
-        
+        images = []
+        # manipulate image in many ways and append to images!
+        images.append(image)
+
+        for image in images:
+          example = tf.train.Example(features=tf.train.Features(
+              feature={
+                  'image': _bytes_feature(image.tobytes()),
+                  'label': _int64_feature(labels[0])
+              }))
+          record_writer.write(example.SerializeToString())
 
       num_entries_in_batch = len(labels)
       for i in range(num_entries_in_batch):
@@ -99,7 +109,7 @@ def convert_to_tfrecord(input_files, output_file):
                 'image': _bytes_feature(data[i].tobytes()),
                 'label': _int64_feature(labels[i])
             }))
-        record_writer.write(example.SerializeToString())
+        #record_writer.write(example.SerializeToString())
 
 
 def main(data_dir):

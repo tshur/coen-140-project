@@ -188,12 +188,17 @@ def get_model_fn(num_gpus, variable_strategy, num_workers):
               tf.metrics.accuracy(stacked_labels, predictions['classes'])
       }
 
+      logging_hook = tf.train.LoggingTensorHook(
+          tensors={'loss': loss}, every_n_iter=1)
+      eval_hooks = [eval_hook]
+
     return tf.estimator.EstimatorSpec(
         mode=mode,
         predictions=predictions,
         loss=loss,
         train_op=train_op,
         training_hooks=train_hooks,
+        evaluation_hooks=eval_hooks,
         eval_metric_ops=metrics)
 
   return _resnet_model_fn
