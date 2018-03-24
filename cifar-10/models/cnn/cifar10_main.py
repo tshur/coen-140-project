@@ -191,7 +191,7 @@ def get_model_fn(num_gpus, variable_strategy, num_workers):
       eval_hook = tf.train.LoggingTensorHook(
           tensors={
             # 'classes': predictions['classes'],
-            'probability': predictions['probabilities'][0]
+            'probability': predictions['probabilities'][0][3]
           }, every_n_iter=1)
       eval_hooks = [eval_hook]
 
